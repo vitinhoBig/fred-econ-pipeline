@@ -34,6 +34,33 @@ def compute_correlation(df):
     # dica: tambem existe um metodo direto de pandas pra isso
     return df.corr()
 
+def to_quarterly(df):
+    # Converter para frequência trimestral, usando a média de cada trimestre
+    # dica: df.resample("QS").mean()
+    quarterly = df.resample("QS").mean()
+
+    # Remover o último trimestre (o GDP dele pode ser só um valor repetido pelo forward-fill)
+    # dica: quarterly.iloc[:-1]
+    return quarterly.iloc[:-1]
+
+
+def compute_change_correlation(df, rate_columns=("UNRATE", "FEDFUNDS"), method="pearson"):
+    quarterly = to_quarterly(df)
+
+    changes = pd.DataFrame(index=quarterly.index)
+    for column in quarterly.columns:
+        if column in rate_columns:
+            # Taxas -> variação em pontos percentuais
+            # dica: quarterly[column].diff()
+            changes[column] = quarterly[column].diff()
+        else:
+            # Séries em nível -> variação percentual
+            # dica: quarterly[column].pct_change()
+            changes[column] = quarterly[column].pct_change()
+
+    # Matriz de correlação das variações
+    return changes.corr(method=method)
+
 
 if __name__ == "__main__":
     df = load_data()
@@ -48,5 +75,12 @@ if __name__ == "__main__":
     print("\n12-month moving average")
     print(rolling_avg.tail())
 
-    print("\nCorrelation matrix")
+    print("\nCorrelation matrix (raw levels, inflated by shared trends)")
     print(corr)
+
+    change_corr = compute_change_correlation(df)
+    print("\nCorrelation matrix (quarterly changes)")
+    print(change_corr)
+
+    print("\nCorrelation matrix (quarterly changes, Spearman)")
+    print(compute_change_correlation(df, method="spearman"))
