@@ -61,11 +61,13 @@ python -m pytest          # unit tests
 - **Decoupled stages:** analysis reads from the database instead of the API, so it can run any time without using API calls.
 - **Observability:** logs go to `logs/pipeline.log` and the console, and pipeline failures are caught and logged.
 - **Tests without network:** unit tests use small synthetic datasets instead of calling the API.
+- **Correlation on changes, not levels:** correlations use quarterly changes (percentage change for level series like CPI and GDP, percentage-point change for rates like UNRATE and FEDFUNDS). Raw levels share long-run trends, which inflates correlations (CPI vs. GDP: 0.97 on levels, 0.45 on changes), and quarterly aggregation avoids the zero-change artifacts that forward-filling creates in monthly data. Spearman rank correlation is reported as an outlier-robustness check.
 
 ## Known limitations
 
-- Forward-filled GDP makes `pct_change()` show 0% in filled months. It is an artifact of the fill, not real stability.
-- Correlations on raw levels are inflated by shared trends (e.g. CPI vs. GDP). Correlating percentage changes would be more meaningful.
+- Forward-filled GDP makes monthly `pct_change()` show 0% in filled months. It is an artifact of the fill, not real stability; the correlation analysis avoids it by working at quarterly frequency.
+- `GDP` is nominal GsDP, so its correlation with CPI partly reflects inflation feeding nominal growth. Real GDP (`GDPC1`) would isolate real activity.
+- Correlations are contemporaneous and sensitive to outliers: UNRATE vs. GDP is -0.70 with Pearson but -0.49 with Spearman, because the 2020 shock inflates the Pearson figure. They show association, not causation.
 - The `schedule` loop only works while the process stays alive. A production deployment would use cron or an orchestrator such as Airflow.
 - The local PostgreSQL setup uses Homebrew's default passwordless access, which is fine for development only. A deployment would need real credentials managed outside the repo.
 
