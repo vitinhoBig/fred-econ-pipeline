@@ -1,20 +1,20 @@
 # FRED Economic Data Pipeline
 
-An end-to-end data engineering pipeline that collects U.S. macroeconomic indicators from the FRED API, cleans and aligns them, stores them in SQLite, and produces analysis and charts.
+An end-to-end data engineering pipeline that collects U.S. macroeconomic indicators from the FRED API, cleans and aligns them, stores them in PostgreSQL, and produces analysis and charts.
 
 ![Indicators overview](data/processed/indicators_overview.png)
 
 ## Pipeline
 
 ```
-FRED API → extract → transform → load (SQLite) → analyze → visualize
+FRED API → extract → transform → load (PostgreSQL) → analyze → visualize
 ```
 
 | Module | Responsibility |
 |---|---|
 | `src/extract.py` | Calls the FRED API for each series listed in `config/series.yaml`, with HTTP error checks and rate-limit spacing |
 | `src/transform.py` | Cleans raw JSON, aligns series by date (outer join), forward-fills lower-frequency series |
-| `src/load.py` | Idempotent upserts into SQLite (`date` as primary key) |
+| `src/load.py` | Idempotent upserts into PostgreSQL (`date` as primary key, ON CONFLICT DO UPDATE) |
 | `src/analyze.py` | Percentage change, 12-month moving average, correlation matrix |
 | `src/visualize.py` | Multi-panel chart of all indicators |
 | `main.py` | Orchestrates the pipeline with structured logging and a daily schedule |
@@ -26,12 +26,20 @@ FRED API → extract → transform → load (SQLite) → analyze → visualize
 ## Setup
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/vitinhoBig/fred-econ-pipeline.git
 cd fred-econ-pipeline
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+
+# PostgreSQL (macOS / Homebrew)
+brew install postgresql@18
+brew services start postgresql@18
+createdb fred_econ
+
+# Credentials and connection
 echo "FRED_API_KEY=your_key_here" > .env
+echo "DATABASE_URL=postgresql://localhost/fred_econ" >> .env
 ```
 
 Get a free API key at https://fredaccount.stlouisfed.org/apikeys
@@ -47,10 +55,10 @@ python -m pytest          # unit tests
 
 ## Design decisions
 
-- **Idempotent loads:** `date` is the primary key and rows are written with `INSERT OR REPLACE`, so re-running the pipeline never duplicates data.
+- **Idempotent loads:** `date` is the primary key and rows are written with `INSERT... ON CONFLICT(date) DO UPDATE`, so re-running never duplicates data and FRED revisions to historical values (e.g. GDP) overwrite the stored ones.
 - **FRED missing values:** FRED encodes missing observations as `"."`. These are converted to `NaN` with `pd.to_numeric(errors="coerce")`.
 - **Mixed frequencies:** monthly and quarterly series are joined on date, and quarterly values (GDP) are forward-filled, never back-filled, to avoid using future information.
-- **Decoupled stages:** analysis reads from SQLite instead of the API, so it can run any time without using API calls.
+- **Decoupled stages:** analysis reads from the database instead of the API, so it can run any time without using API calls.
 - **Observability:** logs go to `logs/pipeline.log` and the console, and pipeline failures are caught and logged.
 - **Tests without network:** unit tests use small synthetic datasets instead of calling the API.
 
@@ -59,6 +67,7 @@ python -m pytest          # unit tests
 - Forward-filled GDP makes `pct_change()` show 0% in filled months. It is an artifact of the fill, not real stability.
 - Correlations on raw levels are inflated by shared trends (e.g. CPI vs. GDP). Correlating percentage changes would be more meaningful.
 - The `schedule` loop only works while the process stays alive. A production deployment would use cron or an orchestrator such as Airflow.
+- The local PostgreSQL setup uses Homebrew's default passwordless access, which is fine for development only. A deployment would need real credentials managed outside the repo.
 
 ## Project structure
 
