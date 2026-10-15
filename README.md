@@ -1,5 +1,7 @@
 # FRED Economic Data Pipeline
 
+[![Tests](https://github.com/vitinhoBig/fred-econ-pipeline/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/vitinhoBig/fred-econ-pipeline/actions/workflows/tests.yml)
+
 An end-to-end data engineering pipeline that collects U.S. macroeconomic indicators from the FRED API, cleans and aligns them, stores them in PostgreSQL, and produces analysis and charts.
 
 ![Indicators overview](data/processed/indicators_overview.png)
