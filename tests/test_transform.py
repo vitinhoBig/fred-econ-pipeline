@@ -52,12 +52,20 @@ def test_fill_missing_propagates_last_known_value():
 
 def test_fill_missing_propagates_across_multiple_columns():
     df = pd.DataFrame(
-        {"X": [1.0, None, None, 4.0]},
+        {
+            "X": [1.0, None, None, 4.0],
+            "Y": [None, 10.0, None, 30.0],
+        },
         index=pd.to_datetime(["2020-01-01", "2020-02-01", "2020-03-01", "2020-04-01"]),
     )
+
     filled = fill_missing(df)
 
     assert filled.iloc[2]["X"] == 1.0
+
+    assert pd.isna(filled.iloc[0]["Y"])
+
+    assert filled.iloc[2]["Y"] == 10.0
 
 
 def test_fill_missing_keeps_leading_nan():
