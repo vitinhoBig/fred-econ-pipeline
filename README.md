@@ -85,3 +85,15 @@ fred-econ-pipeline/
 ## Data source
 
 Data from the Federal Reserve Economic Data (FRED) API. This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.
+
+## Run with Docker
+
+```bash
+cp .env.example .env         # then fill in FRED_API_KEY and POSTGRES_PASSWORD
+docker compose up -d --wait  # PostgreSQL + scheduled pipeline (daily at 08:00 America/New_York)
+docker compose logs -f app   # follow the pipeline logs
+docker compose run --rm app python src/load.py   # run the pipeline once, on demand
+docker compose down          # stop (data is kept in the pgdata volume)
+```
+
+The PostgreSQL container is only exposed on `127.0.0.1:5433`.
