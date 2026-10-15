@@ -33,7 +33,7 @@ def merge_series(series_list):
 def fill_missing(merged_df):
     # TODO: propagar o ultimo valor conhecido pra frente, preenchendo os gaps
     # dica: existe um metodo do pandas que faz exatamente isso, chamado "forward fill"
-    filled = merged_df.ffill()
+    filled = merged_df.bfill()
     return filled
 
 if __name__ == "__main__":
