@@ -76,6 +76,6 @@ def test_fill_missing_keeps_leading_nan():
 
     filled = fill_missing(df)
 
-    # verify that position 0 is still NaN (no value to propagete forward)
+    # verify that position 0 is still NaN (no value to propagate forward)
     assert pd.isna(filled.iloc[0]["X"])
 
